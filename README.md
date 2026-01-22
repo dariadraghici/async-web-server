@@ -2,70 +2,68 @@
 
 ## 📋 Overview
 
-Acest proiect constă în implementarea unui server web de înaltă performanță pentru sistemul de operare Linux, capabil să deservească fișiere în mod asincron. Serverul utilizează tehnici avansate de I/O pentru a maximiza eficiența și a reduce overhead-ul procesorului și al memoriei.
+The **Asynchronous Web Server (AWS)** is a high-performance Linux-based web server designed to serve files efficiently by leveraging advanced I/O paradigms. The primary goal of this project is to minimize CPU overhead and memory latency through asynchronous operations and zero-copy data transfer.
 
 ### Key Technical Features:
 
-* **I/O Multiplexing**: Utilizarea API-ului `epoll` pentru gestionarea eficientă a multiplelor conexiuni simultane.
-* **Zero-copying**: Transmiterea fișierelor statice prin `sendfile` pentru a evita copierea datelor între kernel-space și user-space.
-* **Asynchronous File I/O**: Citirea fișierelor dinamice folosind API-ul `io_setup` / `io_submit` (AIO) pentru a nu bloca execuția serverului.
-* **Non-blocking Sockets**: Toate operațiunile pe socket-uri sunt non-blocante pentru a permite scalabilitatea.
-* **State Machine**: Fiecare conexiune este gestionată printr-o mașină de stări pentru a urmări progresul transferului HTTP.
+* **I/O Multiplexing**: Utilizes the `epoll` API for high-scale, event-driven management of multiple simultaneous client connections.
+* **Zero-Copying**: Implements `sendfile` for static content, bypassing user-space data buffering to accelerate throughput.
+* **Asynchronous File I/O**: Employs Linux AIO (`io_setup`, `io_submit`) for dynamic file processing, ensuring the server remains responsive during heavy disk operations.
+* **Non-blocking Sockets**: All network operations are performed on non-blocking sockets to prevent thread starvation and maximize scalability.
+* **Connection State Machine**: Each client session is governed by a dedicated state machine to track the lifecycle of HTTP requests and responses.
 
 
 ## 🏗️ Server Architecture
 
-Serverul deservește fișiere din directorul rădăcină `AWS_DOCUMENT_ROOT`, împărțind conținutul în două categorii:
+The server categorizes content based on its location within the `AWS_DOCUMENT_ROOT` directory:
 
-1. **Static Content (`/static/`)**:
-* Destinat fișierelor care nu necesită post-procesare.
-* Implementare: `sendfile` (Zero-copy).
+1. **Static Files (`/static/`)**:
+* Designed for assets that require no post-processing.
+* **Mechanism**: Handled via `sendfile` (Zero-copy) for maximum efficiency.
 
 
-2. **Dynamic Content (`/dynamic/`)**:
-* Destinat fișierelor care ar putea necesita procesare ulterioară (în contextul temei, acestea sunt citite asincron).
-* Implementare: Linux AIO (`io_submit`) + Non-blocking sockets.
+2. **Dynamic Files (`/dynamic/`)**:
+* Designed for files that theoretically require server-side processing.
+* **Mechanism**: Read from disk using the **Asynchronous API (AIO)** and pushed to clients via non-blocking sockets.
 
 
 ### HTTP Implementation:
 
-* Suportă protocolul HTTP 1.1 (subset limitat).
-* Coduri de stare: `200 OK` (succes) și `404 Not Found` (cale invalidă).
-* Parsarea cererilor este realizată folosind un callback-based `http-parser`.
-
+* Implements a functional subset of the **HTTP/1.1** protocol.
+* **Response Codes**: `200 OK` for successful retrievals and `404 Not Found` for invalid paths.
+* **Parsing**: Utilizes a callback-based `http-parser` to extract resource paths and headers efficiently.
 
 ## 📂 Project Structure
 
 ```text
 .
-├── aws.c               # Implementarea principală a serverului (logică epoll, stări conexiuni)
-├── aws.h               # Macro-uri, structuri de date și definiții (AWS_DOCUMENT_ROOT, port-uri)
-├── http-parser/        # Parser HTTP extern
-├── tests/              # Suita de testare automată
-└── Makefile            # Instrucțiuni de compilare
+├── aws.c               # Core server implementation (epoll loop, connection logic)
+├── aws.h               # Macros, data structures, and configuration (port, root dir)
+├── http-parser/        # External HTTP parsing library
+├── tests/              # Automated testing suite
+└── Makefile            # Build instructions
 
 ```
-
 
 ## 🛠️ Installation & Testing
 
 ### Prerequisites
 
-* Sistem de operare Linux (kernel modern pentru suport `epoll` și `AIO`).
-* Compilator `gcc` și utilitarul `make`.
+* A Linux-based environment (Kernel support for `epoll` and `eventfd` is required).
+* `gcc` compiler and `make` utility.
 
 ### Compilation
 
-Pentru a compila serverul, rulează următoarea comandă în directorul sursă:
+Build the executable by running the following command in the root directory:
 
 ```bash
 make
 
 ```
 
-### Running Tests
+### Running the Automated Suite
 
-Suita de teste verifică funcționalitatea serverului, utilizarea corectă a API-urilor (sendfile, epoll, io_submit) și eventualele scurgeri de memorie.
+The testing suite validates server functionality, API usage (sendfile, epoll, io_submit), and monitors for memory leaks.
 
 ```bash
 cd tests/
@@ -73,37 +71,40 @@ make check
 
 ```
 
-Pentru a rula un test specific (ex: testul 13):
+To execute a specific test case (e.g., Test 31):
 
 ```bash
-./_test/run_test.sh 13
+./_test/run_test.sh 31
 
 ```
 
----
 
-## ⚙️ Technical Details
+## ⚙️ Technical Deep-Dive
 
 ### Connection State Machine
 
-Fiecare structură `connection` menține o stare (`state`) care poate fi:
+To manage asynchronous events, each `connection` structure maintains a state:
 
-* `STATE_RECEIVING`: Primirea și parsarea header-ului HTTP.
-* `STATE_SENDING_HEADER`: Trimiterea răspunsului HTTP (ex: `HTTP/1.1 200 OK`).
-* `STATE_SENDING_DATA`: Trimiterea conținutului propriu-zis al fișierului.
-* `STATE_CLOSING`: Curățarea resurselor și închiderea socket-ului.
+* `STATE_RECEIVING`: Reading and parsing the incoming HTTP request.
+* `STATE_SENDING_HEADER`: Constructing and transmitting the HTTP response header.
+* `STATE_SENDING_DATA`: Streaming the file content (via `sendfile` or `AIO`).
+* `STATE_CLOSING`: Releasing resources and terminating the socket connection.
 
-### Advanced API Used:
+### Advanced Linux APIs Utilized:
 
 * **Multiplexing**: `epoll_create`, `epoll_ctl`, `epoll_wait`.
 * **Zero-Copy**: `sendfile`.
 * **Async I/O**: `io_setup`, `io_submit`, `io_getevents`, `eventfd`.
 
+---
 
-## 📝 Performance Notes
+## 📝 Performance & Scalability
 
-Prin combinarea `epoll` (notificări bazate pe evenimente) cu `sendfile` și `AIO`, serverul minimizează numărul de context-switches și operațiunile de copiere a datelor, fiind capabil să gestioneze un volum mare de cereri simultane cu un consum minim de resurse.
+By combining event-driven multiplexing with asynchronous disk access, this server mitigates the "C10k problem." It minimizes context switching and memory copies, making it significantly more efficient than traditional thread-per-connection models.
 
 
-**Author:** [Daria-Ioana Drăghici]
-**Project:** Operating Systems - Asynchronous Web Server Assignment
+**Developed by:** Daria-Ioana Drăghici]
+
+**Project:** Operating Systems - Advanced Asynchronous Web Server Implementation
+
+Would you like me to generate a **Short Description** or a list of **Topics/Tags** for your GitHub repository settings?
