@@ -106,5 +106,3 @@ By combining event-driven multiplexing with asynchronous disk access, this serve
 **Developed by:** Daria-Ioana Drăghici]
 
 **Project:** Operating Systems - Advanced Asynchronous Web Server Implementation
-
-Would you like me to generate a **Short Description** or a list of **Topics/Tags** for your GitHub repository settings?
