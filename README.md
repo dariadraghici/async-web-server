@@ -1,6 +1,6 @@
 # Asynchronous Web Server (AWS)
 
-## 📋 Overview
+## Overview
 
 The **Asynchronous Web Server (AWS)** is a high-performance Linux-based web server designed to serve files efficiently by leveraging advanced I/O paradigms. The primary goal of this project is to minimize CPU overhead and memory latency through asynchronous operations and zero-copy data transfer.
 
@@ -13,7 +13,7 @@ The **Asynchronous Web Server (AWS)** is a high-performance Linux-based web serv
 * **Connection State Machine**: Each client session is governed by a dedicated state machine to track the lifecycle of HTTP requests and responses.
 
 
-## 🏗️ Server Architecture
+## Server Architecture
 
 The server categorizes content based on its location within the `AWS_DOCUMENT_ROOT` directory:
 
@@ -33,7 +33,7 @@ The server categorizes content based on its location within the `AWS_DOCUMENT_RO
 * **Response Codes**: `200 OK` for successful retrievals and `404 Not Found` for invalid paths.
 * **Parsing**: Utilizes a callback-based `http-parser` to extract resource paths and headers efficiently.
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 .
@@ -45,7 +45,7 @@ The server categorizes content based on its location within the `AWS_DOCUMENT_RO
 
 ```
 
-## 🛠️ Installation & Testing
+## Installation & Testing
 
 ### Prerequisites
 
@@ -79,7 +79,7 @@ To execute a specific test case (e.g., Test 31):
 ```
 
 
-## ⚙️ Technical Deep-Dive
+## Technical Deep-Dive
 
 ### Connection State Machine
 
@@ -98,7 +98,7 @@ To manage asynchronous events, each `connection` structure maintains a state:
 
 ---
 
-## 📝 Performance & Scalability
+## Performance & Scalability
 
 By combining event-driven multiplexing with asynchronous disk access, this server mitigates the "C10k problem." It minimizes context switching and memory copies, making it significantly more efficient than traditional thread-per-connection models.
 
